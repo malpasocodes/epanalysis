@@ -156,11 +156,8 @@ elif current_page == 'earnings':
         metrics_df = metrics_df[['Institution', 'Region', 'Type', 'Median Earnings (Grad)', 
                                 'HS Earnings Statewide', 'HS Earnings County', 'C-Metric', 'H-Metric', 'Delta']]
         
-        # Format currency columns
-        currency_cols = ['Median Earnings (Grad)', 'HS Earnings Statewide', 'HS Earnings County', 
-                        'C-Metric', 'H-Metric', 'Delta']
-        for col in currency_cols:
-            metrics_df[col] = metrics_df[col].apply(lambda x: f"${x:,.0f}")
+        # DON'T format currency columns as strings - keep numeric for proper sorting
+        # Use column_config in st.dataframe instead
         
         # Use all data without filters
         filtered_df = metrics_df.copy()
@@ -186,12 +183,7 @@ elif current_page == 'earnings':
         top_positive = delta_df.nlargest(10, 'Delta')
         top_negative = delta_df.nsmallest(10, 'Delta')
         
-        # Format Delta column for display
-        top_positive_display = top_positive.copy()
-        top_positive_display['Delta'] = top_positive_display['Delta'].apply(lambda x: f"${x:,.0f}")
-        
-        top_negative_display = top_negative.copy()
-        top_negative_display['Delta'] = top_negative_display['Delta'].apply(lambda x: f"${x:,.0f}")
+        # DON'T format Delta column as string - keep numeric for proper sorting
         
         # Display side by side
         col1, col2 = st.columns(2)
@@ -199,16 +191,66 @@ elif current_page == 'earnings':
         with col1:
             st.markdown("**Top 10 Positive Delta**")
             st.markdown("*Institutions with highest advantage from statewide baseline*")
-            st.dataframe(top_positive_display, use_container_width=True, hide_index=True)
+            st.dataframe(
+                top_positive,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Delta": st.column_config.NumberColumn(
+                        "Delta",
+                        format="$%d",
+                    )
+                }
+            )
         
         with col2:
             st.markdown("**Top 10 Negative Delta**")
             st.markdown("*Institutions with highest advantage from county baseline*")
-            st.dataframe(top_negative_display, use_container_width=True, hide_index=True)
+            st.dataframe(
+                top_negative,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Delta": st.column_config.NumberColumn(
+                        "Delta",
+                        format="$%d",
+                    )
+                }
+            )
         
-        # Display the full table
+        # Display the full table with proper currency formatting and numeric sorting
         st.subheader("Metrics Comparison (All Institutions)")
-        st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+        st.dataframe(
+            filtered_df, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Median Earnings (Grad)": st.column_config.NumberColumn(
+                    "Median Earnings (Grad)",
+                    format="$%d",
+                ),
+                "HS Earnings Statewide": st.column_config.NumberColumn(
+                    "HS Earnings Statewide",
+                    format="$%d",
+                ),
+                "HS Earnings County": st.column_config.NumberColumn(
+                    "HS Earnings County",
+                    format="$%d",
+                ),
+                "C-Metric": st.column_config.NumberColumn(
+                    "C-Metric",
+                    format="$%d",
+                ),
+                "H-Metric": st.column_config.NumberColumn(
+                    "H-Metric",
+                    format="$%d",
+                ),
+                "Delta": st.column_config.NumberColumn(
+                    "Delta",
+                    format="$%d",
+                ),
+            }
+        )
         
         # Add explanation
         with st.expander("ℹ️ Column Definitions"):
