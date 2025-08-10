@@ -52,11 +52,17 @@ def load_combined(path: str) -> pd.DataFrame:
     return df
 
 @st.cache_data
-def load_dataset(combined_path: str, public_path: str) -> pd.DataFrame:
-    """Master loader: combined file + Golden Returns ROI merge (by UNITID else by name)."""
+def load_dataset(combined_path: str, public_path: str = None) -> pd.DataFrame:
+    """Master loader: combined file (public.csv no longer used - archived)."""
     df = load_combined(combined_path)
     if df.empty:
         return df
+    
+    # Skip Golden Returns ROI merge - public.csv archived
+    if public_path is None:
+        return df
+        
+    # Legacy code for public.csv merge (kept for backward compatibility)
     pub = load_public_roi(public_path)
     if pub.empty:
         return df
