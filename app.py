@@ -1,5 +1,6 @@
 # app.py
 import streamlit as st
+import pandas as pd
 from lib.data import load_roi_metrics_dataset
 from lib.ui import render_home, render_explore, render_rankings, render_methodology
 
@@ -141,7 +142,7 @@ elif current_page == 'earnings':
         
         # Select and rename columns for display (including debugging columns)
         metrics_df = display_df[[
-            'Institution', 'Region', 'Type', 'median_earnings_10yr', 'hs_median_income', 
+            'Institution', 'Region', 'Type', 'median_earnings_10yr', 'total_net_price', 'hs_median_income', 
             'premium_statewide', 'premium_regional', 'Delta'
         ]].copy()
         
@@ -150,10 +151,10 @@ elif current_page == 'earnings':
         
         # Rename columns for clarity (CORRECTED: C-Metric = statewide, H-Metric = county)
         metrics_df.columns = ['Institution', 'Region', 'Type', 'Median Earnings (Grad)', 
-                             'HS Earnings County', 'C-Metric', 'H-Metric', 'Delta', 'HS Earnings Statewide']
+                             'Net Tuition', 'HS Earnings County', 'C-Metric', 'H-Metric', 'Delta', 'HS Earnings Statewide']
         
         # Reorder columns for better readability
-        metrics_df = metrics_df[['Institution', 'Region', 'Type', 'Median Earnings (Grad)', 
+        metrics_df = metrics_df[['Institution', 'Region', 'Type', 'Median Earnings (Grad)', 'Net Tuition',
                                 'HS Earnings Statewide', 'HS Earnings County', 'C-Metric', 'H-Metric', 'Delta']]
         
         # DON'T format currency columns as strings - keep numeric for proper sorting
@@ -239,6 +240,10 @@ elif current_page == 'earnings':
                     "Median Earnings (Grad)",
                     format="$%d",
                 ),
+                "Net Tuition": st.column_config.NumberColumn(
+                    "Net Tuition",
+                    format="$%d",
+                ),
                 "HS Earnings Statewide": st.column_config.NumberColumn(
                     "HS Earnings Statewide",
                     format="$%d",
@@ -269,6 +274,7 @@ elif current_page == 'earnings':
             - **Region**: Geographic region in California
             - **Type**: Public or Private institution
             - **Median Earnings (Grad)**: Graduate earnings 10 years after enrollment
+            - **Net Tuition**: Annual net price after financial aid
             - **HS Earnings Statewide**: Statewide high school baseline ($24,939)
             - **HS Earnings County**: County-specific high school baseline
             - **C-Metric**: Statewide earnings premium (Median Earnings - HS Earnings Statewide)
@@ -280,8 +286,150 @@ elif current_page == 'earnings':
             st.markdown("- H-Metric should equal: Median Earnings (Grad) - HS Earnings County")
     
     elif current_subpage == 'analysis':
+        # ROI Analysis Page
         st.header("ROI Analysis")
-        st.info("🚧 **Coming Soon**: Detailed ROI analysis including years to recoup costs and rankings")
+        st.markdown("**Comparison of County-level vs Statewide ROI calculations for California institutions**")
+        
+        # Check if we have data
+        if df.empty:
+            st.error("No data available. Please check the dataset files.")
+            st.stop()
+            
+        # Prepare data for display
+        display_df = df.copy()
+        
+        # Determine institution type (Public/Private) from Sector
+        display_df['Type'] = display_df['Sector'].apply(
+            lambda x: 'Private' if 'Private' in str(x) else 'Public'
+        )
+        
+        # Calculate Delta (difference between C-Metric ROI and H-Metric ROI)
+        # Since C-Metric = statewide and H-Metric = regional: Delta = C-Metric - H-Metric
+        display_df['ROI_Delta'] = display_df['roi_statewide_years'] - display_df['roi_regional_years']
+        
+        # Select and rename columns for display
+        roi_df = display_df[[
+            'Institution', 'Region', 'Type', 'total_net_price',
+            'roi_statewide_years', 'roi_regional_years', 'ROI_Delta'
+        ]].copy()
+        
+        # Rename columns for clarity (C-Metric = statewide, H-Metric = regional)
+        roi_df.columns = ['Institution', 'Region', 'Type', 'Net Tuition', 'C-Metric ROI', 'H-Metric ROI', 'Delta']
+        
+        # Create formatted ROI columns with years and months
+        roi_df['C-Metric ROI Display'] = roi_df['C-Metric ROI'].apply(
+            lambda x: f"{x:.2f} years (≈ {x*12:.1f} months)" if pd.notna(x) and x < 999 else str(x)
+        )
+        roi_df['H-Metric ROI Display'] = roi_df['H-Metric ROI'].apply(
+            lambda x: f"{x:.2f} years (≈ {x*12:.1f} months)" if pd.notna(x) and x < 999 else str(x)
+        )
+        roi_df['Delta Display'] = roi_df['Delta'].apply(
+            lambda x: f"{x:.2f} years (≈ {x*12:.1f} months)" if pd.notna(x) and abs(x) < 999 else str(x)
+        )
+        
+        # Filter out institutions with invalid ROI (999 years indicates negative premium)
+        roi_df = roi_df[(roi_df['C-Metric ROI'] < 999) & (roi_df['H-Metric ROI'] < 999)]
+        
+        # Add explanation of what ROI comparison means
+        st.markdown("""
+        This comparison shows how Return on Investment (ROI) calculations change when using different high school baseline earnings. 
+        
+        **C-Metric ROI** uses a single statewide baseline ($24,939) for all institutions, while **H-Metric ROI** uses each institution's local county baseline. 
+        The **Delta** column shows the difference in years to recoup costs - negative values mean the statewide method shows faster payback.
+        
+        Lower ROI years = better investment (faster to recoup educational costs).
+        """)
+        
+        # Add side-by-side Delta analysis tables
+        st.subheader("Delta Analysis: Top Institutions")
+        
+        # Add control for number of institutions to display
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            num_institutions = st.selectbox(
+                "Number of institutions to display", 
+                [10, 15, 20, 25, 30, 50],
+                index=1,  # Default to 15
+                help="Select how many institutions to show in each table",
+                key="roi_num_institutions"
+            )
+        
+        # Create separate dataframes for best ROI analysis
+        c_metric_df = roi_df[['Institution', 'Region', 'Type', 'Net Tuition', 'C-Metric ROI', 'C-Metric ROI Display']].copy()
+        h_metric_df = roi_df[['Institution', 'Region', 'Type', 'Net Tuition', 'H-Metric ROI', 'H-Metric ROI Display']].copy()
+        
+        # Sort for best ROI (smallest years = better payback)
+        best_c_metric = c_metric_df.nsmallest(num_institutions, 'C-Metric ROI')
+        best_h_metric = h_metric_df.nsmallest(num_institutions, 'H-Metric ROI')
+        
+        # Display side by side
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown(f"**Top {num_institutions} C-Metric ROI**")
+            st.markdown("*Best payback using statewide baseline*")
+            # Drop the numeric column and rename display column
+            display_c = best_c_metric.drop(columns=['C-Metric ROI']).rename(columns={'C-Metric ROI Display': 'C-Metric ROI'})
+            st.dataframe(
+                display_c,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Net Tuition": st.column_config.NumberColumn(
+                        "Net Tuition",
+                        format="$%d",
+                    )
+                }
+            )
+        
+        with col2:
+            st.markdown(f"**Top {num_institutions} H-Metric ROI**")
+            st.markdown("*Best payback using county baseline*")
+            # Drop the numeric column and rename display column
+            display_h = best_h_metric.drop(columns=['H-Metric ROI']).rename(columns={'H-Metric ROI Display': 'H-Metric ROI'})
+            st.dataframe(
+                display_h,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Net Tuition": st.column_config.NumberColumn(
+                        "Net Tuition",
+                        format="$%d",
+                    )
+                }
+            )
+        
+        # Display the full table with proper formatting
+        st.subheader("ROI Comparison (All Institutions)")
+        # Prepare display dataframe with formatted columns
+        display_full = roi_df[['Institution', 'Region', 'Type', 'Net Tuition', 
+                               'C-Metric ROI Display', 'H-Metric ROI Display', 'Delta Display']].copy()
+        display_full.columns = ['Institution', 'Region', 'Type', 'Net Tuition', 
+                                'C-Metric ROI', 'H-Metric ROI', 'Delta']
+        st.dataframe(
+            display_full, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Net Tuition": st.column_config.NumberColumn(
+                    "Net Tuition",
+                    format="$%d",
+                )
+            }
+        )
+        
+        # Add explanation
+        with st.expander("ℹ️ Column Definitions"):
+            st.markdown("""
+            - **Institution**: Name of the educational institution
+            - **Region**: Geographic region in California
+            - **Type**: Public or Private institution
+            - **Net Tuition**: Annual net price after financial aid
+            - **C-Metric ROI**: Years to recoup costs using statewide baseline ($24,939)
+            - **H-Metric ROI**: Years to recoup costs using county-specific baseline
+            - **Delta**: Difference between C-Metric and H-Metric ROI (negative means statewide baseline shows faster payback)
+            """)
+            st.markdown("**Note:** Institutions with negative earnings premiums (indicating costs exceed benefits) are excluded from this analysis.")
     else:
         st.header("Metrics Comparison")
         st.info("🚧 **Coming Soon**: Comprehensive metrics comparison tools")
