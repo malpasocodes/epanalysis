@@ -23,17 +23,14 @@ with st.sidebar.expander("🏠 Home", expanded=True):
         st.session_state.current_page = 'home'
         st.session_state.current_subpage = None
 
-# Earnings Premium Section
-with st.sidebar.expander("💰 Earnings Premium", expanded=False):
-    if st.button("Metrics Comparison", use_container_width=True):
+# Metrics Comparison Section
+with st.sidebar.expander("📊 Metrics Comparison", expanded=False):
+    if st.button("Earnings Premium", use_container_width=True):
         st.session_state.current_page = 'earnings'
         st.session_state.current_subpage = 'comparison'
-    if st.button("Premium Analysis", use_container_width=True):
+    if st.button("ROI", use_container_width=True):
         st.session_state.current_page = 'earnings'
         st.session_state.current_subpage = 'analysis'
-    if st.button("Baseline Comparison", use_container_width=True):
-        st.session_state.current_page = 'earnings'
-        st.session_state.current_subpage = 'baseline'
 
 # Data Analysis Section
 with st.sidebar.expander("📊 Data Analysis", expanded=False):
@@ -118,8 +115,8 @@ if current_page == 'home':
     render_home()
 elif current_page == 'earnings':
     if current_subpage == 'comparison':
-        # Metrics Comparison Page
-        st.header("Earnings Premium: Metrics Comparison")
+        # Earnings Premium Page
+        st.header("Earnings Premium Analysis")
         st.markdown("**Comparison of County-level vs Statewide earnings premiums for California institutions**")
         
         # Check if we have data
@@ -177,14 +174,24 @@ elif current_page == 'earnings':
         """)
         
         # Add side-by-side Delta analysis tables
-        st.subheader("Delta Analysis: Top 10 Institutions")
+        st.subheader("Delta Analysis: Top Institutions")
+        
+        # Add control for number of institutions to display
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            num_institutions = st.selectbox(
+                "Number of institutions to display", 
+                [10, 15, 20, 25, 30, 50],
+                index=1,  # Default to 15
+                help="Select how many institutions to show in each table"
+            )
         
         # Create separate dataframes for Delta analysis (using original numeric values)
         delta_df = display_df[['Institution', 'Region', 'Type', 'Delta']].copy()
         
-        # Sort for top positive and negative deltas
-        top_positive = delta_df.nlargest(10, 'Delta')
-        top_negative = delta_df.nsmallest(10, 'Delta')
+        # Sort for top positive and negative deltas (limited to selected number)
+        top_positive = delta_df.nlargest(num_institutions, 'Delta')
+        top_negative = delta_df.nsmallest(num_institutions, 'Delta')
         
         # DON'T format Delta column as string - keep numeric for proper sorting
         
@@ -192,7 +199,7 @@ elif current_page == 'earnings':
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("**Top 10 Positive Delta**")
+            st.markdown(f"**Top {num_institutions} Positive Delta**")
             st.markdown("*Institutions with highest advantage from statewide baseline*")
             st.dataframe(
                 top_positive,
@@ -207,7 +214,7 @@ elif current_page == 'earnings':
             )
         
         with col2:
-            st.markdown("**Top 10 Negative Delta**")
+            st.markdown(f"**Top {num_institutions} Negative Delta**")
             st.markdown("*Institutions with highest advantage from county baseline*")
             st.dataframe(
                 top_negative,
@@ -273,14 +280,11 @@ elif current_page == 'earnings':
             st.markdown("- H-Metric should equal: Median Earnings (Grad) - HS Earnings County")
     
     elif current_subpage == 'analysis':
-        st.header("Premium Analysis")
-        st.info("🚧 **Coming Soon**: Detailed analysis of earnings premium patterns and trends")
-    elif current_subpage == 'baseline':
-        st.header("Baseline Comparison") 
-        st.info("🚧 **Coming Soon**: Comparison of county vs statewide baseline methodologies")
+        st.header("ROI Analysis")
+        st.info("🚧 **Coming Soon**: Detailed ROI analysis including years to recoup costs and rankings")
     else:
-        st.header("Earnings Premium Analysis")
-        st.info("🚧 **Coming Soon**: Comprehensive earnings premium analysis tools")
+        st.header("Metrics Comparison")
+        st.info("🚧 **Coming Soon**: Comprehensive metrics comparison tools")
 elif current_page == 'explore':
     if current_subpage == 'quadrant':
         render_explore(df)  # Current quadrant chart implementation
