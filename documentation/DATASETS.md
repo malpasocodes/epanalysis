@@ -195,7 +195,7 @@ This dataset contains 327 California higher education institutions (206 private,
 
 ## Change Log
 
-### 2025-08-10: Initial Consolidation
+### 2025-08-10: Initial Consolidation (v0.1)
 - **Action**: Created consolidated gr-institutions.csv dataset
 - **Source Files**: 
   - gr-private.csv (206 institutions)
@@ -209,6 +209,20 @@ This dataset contains 327 California higher education institutions (206 private,
 - **Output**: gr-institutions.csv (327 institutions)
 - **Quality Checks**: Field availability verified, data types standardized
 - **Documentation Created**: Complete field definitions and lineage documentation
+
+### 2025-08-10: ROI Metrics Integration (v0.3)
+- **Action**: Created roi-metrics.csv with comprehensive ROI calculations for all institutions
+- **Integration**: Combined public and private institutions into single analytical dataset
+- **Coverage**: 100% institution coverage (327 institutions)
+- **Data Quality**: 86.5% valid statewide ROI, 87.5% valid regional ROI
+- **Optimization**: Pre-calculated metrics eliminate runtime computation overhead
+
+### 2025-08-10: UI Optimization (v0.4)
+- **Action**: Streamlined user interface controls and navigation
+- **Delta Analysis**: Simplified from dual controls to single "Number of institutions to display"
+- **Navigation**: Reorganized sidebar labels for improved clarity
+- **User Experience**: Eliminated pagination complexity, defaulted to 15 institutions
+- **Performance**: Maintained optimized two-dataset architecture
 
 ### Field Evolution
 - **Annual Net Price**: Added as 13th field in consolidation process
