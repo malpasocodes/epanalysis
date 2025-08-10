@@ -52,8 +52,51 @@ def load_combined(path: str) -> pd.DataFrame:
     return df
 
 @st.cache_data
+def load_roi_metrics_dataset(roi_metrics_path: str = "data/roi-metrics.csv", 
+                             institutions_path: str = "data/dataprep/gr-institutions.csv") -> pd.DataFrame:
+    """New primary loader: roi-metrics dataset merged with institutions data."""
+    try:
+        # Load ROI metrics
+        roi_df = pd.read_csv(roi_metrics_path)
+        
+        # Load institutions data for additional fields like Region
+        inst_df = pd.read_csv(institutions_path)
+        
+        # Merge on Institution name (both datasets should have this)
+        df = roi_df.merge(
+            inst_df[['Institution', 'Region']], 
+            on='Institution', 
+            how='left'
+        )
+        
+        # Handle any missing regions
+        if df['Region'].isna().any():
+            missing_count = df['Region'].isna().sum()
+            st.warning(f"Missing Region data for {missing_count} institutions")
+        
+        # Ensure numeric columns are properly typed
+        numeric_cols = [
+            'median_earnings_10yr', 'total_net_price', 'premium_statewide', 'premium_regional',
+            'roi_statewide_years', 'roi_regional_years', 'rank_statewide', 'rank_regional', 
+            'rank_change', 'hs_median_income'
+        ]
+        
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+        
+        return df
+        
+    except FileNotFoundError as e:
+        st.error(f"Dataset file not found: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error loading datasets: {e}")
+        return pd.DataFrame()
+
+@st.cache_data
 def load_dataset(combined_path: str, public_path: str = None) -> pd.DataFrame:
-    """Master loader: combined file (public.csv no longer used - archived)."""
+    """Legacy loader: combined file (public.csv no longer used - archived)."""
     df = load_combined(combined_path)
     if df.empty:
         return df

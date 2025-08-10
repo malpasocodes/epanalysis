@@ -1,14 +1,12 @@
 # app.py
 import streamlit as st
-from lib.data import load_dataset
+from lib.data import load_roi_metrics_dataset
 from lib.ui import render_home, render_explore, render_rankings, render_methodology
 
 st.set_page_config(page_title="Earnings Premium & ROI Explorer", layout="wide")
 
-# Load once; no longer using public.csv (archived)
-df = load_dataset(
-    combined_path="data/roi_with_county_baseline_combined_clean.csv"
-)
+# Load new primary dataset with all institutions (public + private)
+df = load_roi_metrics_dataset("data/roi-metrics.csv")
 
 # Sidebar with expandable sections for navigation
 st.sidebar.title("Navigation")
@@ -124,6 +122,11 @@ elif current_page == 'earnings':
         st.header("Earnings Premium: Metrics Comparison")
         st.markdown("**Comparison of County-level vs Statewide earnings premiums for California institutions**")
         
+        # Check if we have data
+        if df.empty:
+            st.error("No data available. Please check the dataset files.")
+            st.stop()
+            
         # Prepare data for display
         display_df = df.copy()
         
