@@ -53,7 +53,7 @@ def load_combined(path: str) -> pd.DataFrame:
 
 @st.cache_data
 def load_roi_metrics_dataset(roi_metrics_path: str = "data/roi-metrics.csv", 
-                             institutions_path: str = "data/dataprep/gr-institutions.csv") -> pd.DataFrame:
+                             institutions_path: str = "data/gr-institutions.csv") -> pd.DataFrame:
     """New primary loader: roi-metrics dataset merged with institutions data."""
     try:
         # Load ROI metrics
