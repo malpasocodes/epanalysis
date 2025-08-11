@@ -396,3 +396,348 @@ def render_college_view(df):
         metrics_df = pd.DataFrame(metrics_data)
         st.dataframe(metrics_df, use_container_width=True, hide_index=True)
 
+def render_earnings_premium_rankings(df):
+    """Render side-by-side Earnings Premium rankings for C-Metric and H-Metric."""
+    st.title("Earnings Premium Rankings")
+    st.markdown("Side-by-side comparison of rankings based on C-Metric (Statewide) and H-Metric (Regional) earnings premiums")
+    
+    # Check if data is available
+    if df.empty:
+        st.error("No data available. Please check the dataset files.")
+        return
+    
+    # Sort data for rankings
+    df_cmetric = df.copy().sort_values('premium_statewide', ascending=False)
+    df_hmetric = df.copy().sort_values('premium_regional', ascending=False)
+    
+    # Add rank columns
+    df_cmetric['Rank'] = range(1, len(df_cmetric) + 1)
+    df_hmetric['Rank'] = range(1, len(df_hmetric) + 1)
+    
+    # Create two columns for side-by-side display
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📊 C-Metric Rankings")
+        st.markdown("*Based on Statewide Baseline ($24,939)*")
+        
+        # Prepare display dataframe
+        display_cmetric = df_cmetric[['Rank', 'Institution', 'Sector', 'premium_statewide']].copy()
+        display_cmetric.columns = ['Rank', 'Institution', 'Sector', 'Earnings Premium']
+        # Round earnings premium to whole numbers (keep as float to handle NaN)
+        display_cmetric['Earnings Premium'] = display_cmetric['Earnings Premium'].round(0)
+        
+        # Display table with formatting
+        st.dataframe(
+            display_cmetric,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Rank": st.column_config.NumberColumn(
+                    "Rank",
+                    format="%d"
+                ),
+                "Earnings Premium": st.column_config.NumberColumn(
+                    "Earnings Premium",
+                    format="$%,.0f"
+                )
+            },
+            height=600
+        )
+    
+    with col2:
+        st.subheader("📊 H-Metric Rankings")
+        st.markdown("*Based on Regional (County) Baselines*")
+        
+        # Prepare display dataframe
+        display_hmetric = df_hmetric[['Rank', 'Institution', 'Sector', 'premium_regional']].copy()
+        display_hmetric.columns = ['Rank', 'Institution', 'Sector', 'Earnings Premium']
+        # Round earnings premium to whole numbers (keep as float to handle NaN)
+        display_hmetric['Earnings Premium'] = display_hmetric['Earnings Premium'].round(0)
+        
+        # Display table with formatting
+        st.dataframe(
+            display_hmetric,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Rank": st.column_config.NumberColumn(
+                    "Rank",
+                    format="%d"
+                ),
+                "Earnings Premium": st.column_config.NumberColumn(
+                    "Earnings Premium",
+                    format="$%,.0f"
+                )
+            },
+            height=600
+        )
+    
+    # Scatterplot section
+    st.markdown("---")
+    st.subheader("📈 Earnings Premium vs. Cost Analysis")
+    
+    # Create scatterplot using Altair
+    import altair as alt
+    
+    # Prepare data for both C-Metric and H-Metric
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**C-Metric (Statewide) Scatterplot**")
+        
+        # Create chart for C-Metric
+        chart_c = alt.Chart(df).mark_circle(size=60, opacity=0.7).encode(
+            x=alt.X('total_net_price:Q', 
+                   title='Total Net Price (2 years)', 
+                   scale=alt.Scale(zero=False)),
+            y=alt.Y('premium_statewide:Q', 
+                   title='Earnings Premium (C-Metric)', 
+                   scale=alt.Scale(zero=False)),
+            color=alt.Color('Sector:N', 
+                          scale=alt.Scale(domain=['Public', 'Private for-profit', 'Private non-profit'], 
+                                        range=['#1f77b4', '#ff7f0e', '#2ca02c']),
+                          title='Sector'),
+            tooltip=['Institution:N', 'Sector:N', 'total_net_price:Q', 'premium_statewide:Q']
+        ).properties(
+            width=350,
+            height=400,
+            title="Cost vs Statewide Earnings Premium"
+        )
+        
+        st.altair_chart(chart_c, use_container_width=True)
+    
+    with col2:
+        st.markdown("**H-Metric (Regional) Scatterplot**")
+        
+        # Create chart for H-Metric
+        chart_h = alt.Chart(df).mark_circle(size=60, opacity=0.7).encode(
+            x=alt.X('total_net_price:Q', 
+                   title='Total Net Price (2 years)', 
+                   scale=alt.Scale(zero=False)),
+            y=alt.Y('premium_regional:Q', 
+                   title='Earnings Premium (H-Metric)', 
+                   scale=alt.Scale(zero=False)),
+            color=alt.Color('Sector:N', 
+                          scale=alt.Scale(domain=['Public', 'Private for-profit', 'Private non-profit'], 
+                                        range=['#1f77b4', '#ff7f0e', '#2ca02c']),
+                          title='Sector'),
+            tooltip=['Institution:N', 'Sector:N', 'total_net_price:Q', 'premium_regional:Q']
+        ).properties(
+            width=350,
+            height=400,
+            title="Cost vs Regional Earnings Premium"
+        )
+        
+        st.altair_chart(chart_h, use_container_width=True)
+    
+    # Key Insights section (moved below scatterplots)
+    st.markdown("---")
+    st.subheader("📈 Key Insights")
+    
+    # Find institutions with biggest rank changes
+    rank_comparison = pd.merge(
+        df_cmetric[['Institution', 'Rank']].rename(columns={'Rank': 'C_Rank'}),
+        df_hmetric[['Institution', 'Rank']].rename(columns={'Rank': 'H_Rank'}),
+        on='Institution'
+    )
+    rank_comparison['Rank_Change'] = rank_comparison['C_Rank'] - rank_comparison['H_Rank']
+    
+    # Biggest gainers and losers
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**🔺 Biggest Gainers (H-Metric favors)**")
+        gainers = rank_comparison.nlargest(5, 'Rank_Change')[['Institution', 'C_Rank', 'H_Rank', 'Rank_Change']]
+        gainers['Change'] = gainers['Rank_Change'].apply(lambda x: f"+{x}" if x > 0 else str(x))
+        st.dataframe(gainers[['Institution', 'C_Rank', 'H_Rank', 'Change']], hide_index=True)
+    
+    with col2:
+        st.markdown("**🔻 Biggest Losers (C-Metric favors)**")
+        losers = rank_comparison.nsmallest(5, 'Rank_Change')[['Institution', 'C_Rank', 'H_Rank', 'Rank_Change']]
+        losers['Change'] = losers['Rank_Change'].apply(lambda x: f"+{x}" if x > 0 else str(x))
+        st.dataframe(losers[['Institution', 'C_Rank', 'H_Rank', 'Change']], hide_index=True)
+
+def render_roi_rankings(df):
+    """Render side-by-side ROI rankings for Statewide and Regional baselines."""
+    st.title("ROI Rankings")
+    st.markdown("Side-by-side comparison of Return on Investment rankings (years to recoup educational costs)")
+    
+    # Check if data is available
+    if df.empty:
+        st.error("No data available. Please check the dataset files.")
+        return
+    
+    # Filter out institutions with invalid ROI (999 values)
+    df_valid = df[(df['roi_statewide_years'] < 999) & (df['roi_regional_years'] < 999)].copy()
+    
+    if df_valid.empty:
+        st.error("No institutions with valid ROI data.")
+        return
+    
+    # Sort data for rankings (lower ROI is better)
+    df_statewide = df_valid.copy().sort_values('roi_statewide_years', ascending=True)
+    df_regional = df_valid.copy().sort_values('roi_regional_years', ascending=True)
+    
+    # Add rank columns
+    df_statewide['Rank'] = range(1, len(df_statewide) + 1)
+    df_regional['Rank'] = range(1, len(df_regional) + 1)
+    
+    # Create two columns for side-by-side display
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("💰 Statewide ROI Rankings")
+        st.markdown("*Based on Statewide Baseline ($24,939)*")
+        
+        # Prepare display dataframe
+        display_statewide = df_statewide[['Rank', 'Institution', 'Sector', 'roi_statewide_years', 'total_net_price']].copy()
+        display_statewide.columns = ['Rank', 'Institution', 'Sector', 'ROI (Years)', 'Total Cost (2yr)']
+        
+        # Format ROI years with month approximation
+        display_statewide['ROI (Years)'] = display_statewide['ROI (Years)'].apply(
+            lambda x: f"{x:.2f} years (≈ {x*12:.1f} months)" if x < 1 else f"{x:.2f} years"
+        )
+        
+        # Display table with formatting
+        st.dataframe(
+            display_statewide,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Rank": st.column_config.NumberColumn(
+                    "Rank",
+                    format="%d"
+                ),
+                "Total Cost (2yr)": st.column_config.NumberColumn(
+                    "Total Cost (2yr)",
+                    format="$%,.0f"
+                )
+            },
+            height=600
+        )
+    
+    with col2:
+        st.subheader("💰 Regional ROI Rankings")
+        st.markdown("*Based on Regional (County) Baselines*")
+        
+        # Prepare display dataframe
+        display_regional = df_regional[['Rank', 'Institution', 'Sector', 'roi_regional_years', 'total_net_price']].copy()
+        display_regional.columns = ['Rank', 'Institution', 'Sector', 'ROI (Years)', 'Total Cost (2yr)']
+        
+        # Format ROI years with month approximation
+        display_regional['ROI (Years)'] = display_regional['ROI (Years)'].apply(
+            lambda x: f"{x:.2f} years (≈ {x*12:.1f} months)" if x < 1 else f"{x:.2f} years"
+        )
+        
+        # Display table with formatting
+        st.dataframe(
+            display_regional,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Rank": st.column_config.NumberColumn(
+                    "Rank",
+                    format="%d"
+                ),
+                "Total Cost (2yr)": st.column_config.NumberColumn(
+                    "Total Cost (2yr)",
+                    format="$%,.0f"
+                )
+            },
+            height=600
+        )
+    
+    # Scatterplot section
+    st.markdown("---")
+    st.subheader("📈 ROI vs. Cost Analysis")
+    
+    # Create scatterplot using Altair
+    import altair as alt
+    
+    # Prepare data for both Statewide and Regional ROI
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Statewide ROI Scatterplot**")
+        
+        # Create chart for Statewide ROI
+        chart_sw = alt.Chart(df_valid).mark_circle(size=60, opacity=0.7).encode(
+            x=alt.X('total_net_price:Q', 
+                   title='Total Net Price (2 years)', 
+                   scale=alt.Scale(zero=False)),
+            y=alt.Y('roi_statewide_years:Q', 
+                   title='ROI (Years) - Statewide', 
+                   scale=alt.Scale(zero=False)),
+            color=alt.Color('Sector:N', 
+                          scale=alt.Scale(domain=['Public', 'Private for-profit', 'Private non-profit'], 
+                                        range=['#1f77b4', '#ff7f0e', '#2ca02c']),
+                          title='Sector'),
+            tooltip=['Institution:N', 'Sector:N', 'total_net_price:Q', 'roi_statewide_years:Q']
+        ).properties(
+            width=350,
+            height=400,
+            title="Cost vs Statewide ROI (Years)"
+        )
+        
+        st.altair_chart(chart_sw, use_container_width=True)
+    
+    with col2:
+        st.markdown("**Regional ROI Scatterplot**")
+        
+        # Create chart for Regional ROI
+        chart_reg = alt.Chart(df_valid).mark_circle(size=60, opacity=0.7).encode(
+            x=alt.X('total_net_price:Q', 
+                   title='Total Net Price (2 years)', 
+                   scale=alt.Scale(zero=False)),
+            y=alt.Y('roi_regional_years:Q', 
+                   title='ROI (Years) - Regional', 
+                   scale=alt.Scale(zero=False)),
+            color=alt.Color('Sector:N', 
+                          scale=alt.Scale(domain=['Public', 'Private for-profit', 'Private non-profit'], 
+                                        range=['#1f77b4', '#ff7f0e', '#2ca02c']),
+                          title='Sector'),
+            tooltip=['Institution:N', 'Sector:N', 'total_net_price:Q', 'roi_regional_years:Q']
+        ).properties(
+            width=350,
+            height=400,
+            title="Cost vs Regional ROI (Years)"
+        )
+        
+        st.altair_chart(chart_reg, use_container_width=True)
+    
+    # ROI Analysis section (moved below scatterplots)
+    st.markdown("---")
+    st.subheader("📈 ROI Analysis")
+    
+    # Compare rankings
+    rank_comparison = pd.merge(
+        df_statewide[['Institution', 'Rank', 'roi_statewide_years']].rename(columns={'Rank': 'SW_Rank'}),
+        df_regional[['Institution', 'Rank', 'roi_regional_years']].rename(columns={'Rank': 'Reg_Rank'}),
+        on='Institution'
+    )
+    rank_comparison['Rank_Change'] = rank_comparison['SW_Rank'] - rank_comparison['Reg_Rank']
+    
+    # Top performers and biggest changes
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("**🏆 Top 5 Overall ROI**")
+        top_roi = df_valid.nsmallest(5, 'roi_statewide_years')[['Institution', 'roi_statewide_years', 'roi_regional_years']]
+        top_roi.columns = ['Institution', 'Statewide', 'Regional']
+        for col in ['Statewide', 'Regional']:
+            top_roi[col] = top_roi[col].apply(lambda x: f"{x:.2f} yrs")
+        st.dataframe(top_roi, hide_index=True)
+    
+    with col2:
+        st.markdown("**🔺 Regional Baseline Helps**")
+        helps = rank_comparison.nlargest(5, 'Rank_Change')[['Institution', 'SW_Rank', 'Reg_Rank']]
+        helps.columns = ['Institution', 'SW', 'Reg']
+        st.dataframe(helps, hide_index=True)
+    
+    with col3:
+        st.markdown("**🔻 Statewide Baseline Helps**")
+        hurts = rank_comparison.nsmallest(5, 'Rank_Change')[['Institution', 'SW_Rank', 'Reg_Rank']]
+        hurts.columns = ['Institution', 'SW', 'Reg']
+        st.dataframe(hurts, hide_index=True)
+

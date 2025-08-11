@@ -38,80 +38,34 @@ with st.sidebar.expander("📊 Metrics", expanded=False):
         st.session_state.current_page = 'metrics'
         st.session_state.current_subpage = 'college_view'
 
+# Rankings Section
+with st.sidebar.expander("📈 Rankings", expanded=False):
+    if st.button("Earnings Premium", use_container_width=True, key="rankings_ep"):
+        st.session_state.current_page = 'rankings'
+        st.session_state.current_subpage = 'earnings_premium'
+    if st.button("ROI", use_container_width=True, key="rankings_roi"):
+        st.session_state.current_page = 'rankings'
+        st.session_state.current_subpage = 'roi'
+
 # Data Analysis Section
 with st.sidebar.expander("📊 Data Analysis", expanded=False):
-    if st.button("Quadrant Chart", use_container_width=True):
-        st.session_state.current_page = 'explore'
-        st.session_state.current_subpage = 'quadrant'
-    if st.button("Regional Comparison", use_container_width=True):
-        st.session_state.current_page = 'explore'
-        st.session_state.current_subpage = 'regional'
-    if st.button("Sector Analysis", use_container_width=True):
-        st.session_state.current_page = 'explore'
-        st.session_state.current_subpage = 'sector'
-    if st.button("Data Filters", use_container_width=True):
-        st.session_state.current_page = 'explore'
-        st.session_state.current_subpage = 'filters'
-
-# ROI Rankings Section
-with st.sidebar.expander("📈 ROI Rankings", expanded=False):
-    if st.button("Side-by-Side Rankings", use_container_width=True):
-        st.session_state.current_page = 'rankings'
-        st.session_state.current_subpage = 'sidebyside'
-    if st.button("Rank Changes", use_container_width=True):
-        st.session_state.current_page = 'rankings'
-        st.session_state.current_subpage = 'changes'
-    if st.button("Top Performers", use_container_width=True):
-        st.session_state.current_page = 'rankings'
-        st.session_state.current_subpage = 'top'
+    st.info("🚧 Coming in next release")
 
 # Methodology & Data Section
 with st.sidebar.expander("📋 Methodology & Data", expanded=False):
-    if st.button("Data Sources", use_container_width=True):
-        st.session_state.current_page = 'methodology'
-        st.session_state.current_subpage = 'sources'
-    if st.button("Calculations", use_container_width=True):
-        st.session_state.current_page = 'methodology'
-        st.session_state.current_subpage = 'calculations'
-    if st.button("Assumptions", use_container_width=True):
-        st.session_state.current_page = 'methodology'
-        st.session_state.current_subpage = 'assumptions'
+    st.info("🚧 Coming in next release")
 
-# Additional Analysis Section
+# Advanced Analysis Section
 with st.sidebar.expander("📊 Advanced Analysis", expanded=False):
-    if st.button("Institution Profiles", use_container_width=True):
-        st.session_state.current_page = 'advanced'
-        st.session_state.current_subpage = 'profiles'
-    if st.button("Trend Analysis", use_container_width=True):
-        st.session_state.current_page = 'advanced'
-        st.session_state.current_subpage = 'trends'
-    if st.button("Statistical Tests", use_container_width=True):
-        st.session_state.current_page = 'advanced'
-        st.session_state.current_subpage = 'stats'
+    st.info("🚧 Coming in next release")
 
-# Export & Tools Section
+# Tools & Export Section
 with st.sidebar.expander("🔧 Tools & Export", expanded=False):
-    if st.button("Data Export", use_container_width=True):
-        st.session_state.current_page = 'tools'
-        st.session_state.current_subpage = 'export'
-    if st.button("Report Generator", use_container_width=True):
-        st.session_state.current_page = 'tools'
-        st.session_state.current_subpage = 'report'
-    if st.button("API Access", use_container_width=True):
-        st.session_state.current_page = 'tools'
-        st.session_state.current_subpage = 'api'
+    st.info("🚧 Coming in next release")
 
 # About & Help Section
 with st.sidebar.expander("ℹ️ About & Help", expanded=False):
-    if st.button("Project Background", use_container_width=True):
-        st.session_state.current_page = 'about'
-        st.session_state.current_subpage = 'background'
-    if st.button("User Guide", use_container_width=True):
-        st.session_state.current_page = 'about'
-        st.session_state.current_subpage = 'guide'
-    if st.button("Contact & Feedback", use_container_width=True):
-        st.session_state.current_page = 'about'
-        st.session_state.current_subpage = 'contact'
+    st.info("🚧 Coming in next release")
 
 # Main content area - render based on current page/subpage
 current_page = st.session_state.current_page
@@ -462,8 +416,14 @@ elif current_page == 'explore':
     else:
         render_explore(df)  # Default to quadrant chart
 elif current_page == 'rankings':
-    if current_subpage == 'sidebyside':
-        render_rankings(df)  # Current side-by-side implementation
+    if current_subpage == 'earnings_premium':
+        from lib.ui import render_earnings_premium_rankings
+        render_earnings_premium_rankings(df)
+    elif current_subpage == 'roi':
+        from lib.ui import render_roi_rankings
+        render_roi_rankings(df)
+    elif current_subpage == 'sidebyside':
+        render_rankings(df)  # Keep legacy implementation
     elif current_subpage == 'changes':
         st.header("Rank Changes Analysis")
         st.info("🚧 **Coming Soon**: Detailed analysis of ranking changes between baselines")
@@ -471,7 +431,9 @@ elif current_page == 'rankings':
         st.header("Top Performing Institutions")
         st.info("🚧 **Coming Soon**: Spotlight on highest ROI institutions")
     else:
-        render_rankings(df)  # Default to side-by-side
+        # Default to earnings premium rankings
+        from lib.ui import render_earnings_premium_rankings
+        render_earnings_premium_rankings(df)
 elif current_page == 'methodology':
     if current_subpage == 'sources':
         st.header("Data Sources")
