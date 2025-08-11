@@ -4,7 +4,9 @@
 [![Python](https://img.shields.io/badge/python-3.13-blue.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/streamlit-1.48+-red.svg)](https://streamlit.io)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Deployment](https://img.shields.io/badge/deployment-Render-purple.svg)](https://render.com)
+[![Live Site](https://img.shields.io/badge/live%20site-edroi.org-brightgreen.svg)](http://edroi.org)
+
+> **🌐 Live Application**: **[http://edroi.org](http://edroi.org)**
 
 A comprehensive research and policy analysis platform for evaluating Return on Investment (ROI) metrics and earnings premiums across California's Associate's degree-granting institutions. This tool demonstrates the impact of different baseline methodologies on institutional rankings and provides critical insights for education policy decision-making.
 
@@ -71,7 +73,7 @@ This platform demonstrates that institutions in economically disadvantaged regio
 
 ## Demo & Screenshots
 
-> **Live Demo**: [View the deployed application](https://your-render-url.onrender.com) (Replace with actual URL when deployed)
+> **Live Demo**: **[http://edroi.org](http://edroi.org)**
 
 ### Main Dashboard
 ![Dashboard Preview](docs/images/dashboard-preview.png)
