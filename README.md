@@ -1,5 +1,4 @@
-# ROI Analytics Platform for California Associate's Degree Programs
-
+# Higher Ed ROI (EDROI) Research Lab 
 [![Version](https://img.shields.io/badge/version-v1.0-blue.svg)](https://github.com/malpasocodes/epanalysis/releases)
 [![Python](https://img.shields.io/badge/python-3.13-blue.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/streamlit-1.48+-red.svg)](https://streamlit.io)
@@ -8,7 +7,11 @@
 
 > **🌐 Live Application**: **[http://edroi.org](http://edroi.org)**
 
-A comprehensive research and policy analysis platform for evaluating Return on Investment (ROI) metrics and earnings premiums across California's Associate's degree-granting institutions. This tool demonstrates the impact of different baseline methodologies on institutional rankings and provides critical insights for education policy decision-making.
+The Higher Ed ROI Research Lab provides independent, data-driven analysis of higher education return on investment (ROI) and earnings premium outcomes. Our primary audience is researchers, policymakers, and education analysts. We take no advocacy position on individual institutions, programs, metrics or policies. Instead, our goal is to provide clear, well-documented methods that help inform policy discussions, institutional accountability, and public understanding of postsecondary education value.
+
+Our current work examines the policy implications of new federal accountability rules, particularly the Earnings Premium Regulation introduced under Title VIII, Subtitle E of the Higher Education Act amendments (effective July 1, 2026) This rule may make certain programs ineligible for federal funding if graduates' median earnings fall below the median for comparable high school graduates in their state or nationwide.
+
+We are using California's two-year and certificate-granting colleges as a pilot dataset to explore how these rules may operate and how alternative metrics may yield different policy outcomes.
 
 ---
 
