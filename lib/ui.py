@@ -1,23 +1,65 @@
 # lib/ui.py
 import streamlit as st
 import pandas as pd
+from pathlib import Path
 from .charts import quadrant_chart
 
+def load_markdown_content(filename: str) -> str:
+    """Load markdown content from the content directory."""
+    content_dir = Path(__file__).parent.parent / "content"
+    file_path = content_dir / filename
+    
+    if file_path.exists():
+        return file_path.read_text()
+    else:
+        return f"Content file not found: {filename}"
+
+def render_markdown_page(filename: str):
+    """Render a markdown file as a Streamlit page."""
+    content = load_markdown_content(filename)
+    st.markdown(content)
+
 def render_home():
-    st.title("Earnings Premium & ROI — Why the Baseline Matters")
-    st.write(
-        "This project examines how the **Earnings Premium** regulation assesses college value, "
-        "and shows how switching from a single **statewide** high-school earnings baseline to a "
-        "**local (county)** baseline can radically change ROI and rankings."
-    )
-    st.subheader("What you’ll find here")
+    st.title("Higher Ed ROI Research Lab")
+    st.markdown("*Data-driven insights on college earnings premiums and ROI outcomes*")
+    
+    st.markdown("---")
+    
+    # Mission
+    st.subheader("Mission")
     st.markdown(
-        "- **Explore Data**: Interactive quadrant chart (Price vs 10-year Earnings) with region/sector filters.\n"
-        "- **Rankings**: Before/after ROI ranks (Statewide vs Local baseline).\n"
-        "- **Methodology**: Definitions, data sources, assumptions, and limitations.\n"
-        "- **About**: Project background and credits."
+        "The **Higher Ed ROI Research Lab** provides independent, data-driven analysis of higher education "
+        "return on investment (ROI) and earnings premium outcomes. Our primary audience is researchers, "
+        "policymakers, and education analysts. We take no advocacy position on individual institutions, "
+        "programs, metrics or policies. Instead, our goal is to provide clear, well-documented methods that "
+        "help inform policy discussions, institutional accountability, and public understanding of "
+        "postsecondary education value."
     )
-    st.info("Use the left sidebar to navigate.")
+    
+    # Current Focus
+    st.subheader("Current Focus")
+    st.markdown(
+        "Our current work examines the policy implications of new federal accountability rules, "
+        "particularly the **Earnings Premium Regulation** introduced under Title VIII, Subtitle E "
+        "of the Higher Education Act amendments (effective July 1, 2026) "
+        "This rule may make certain programs ineligible for federal funding if graduates' median "
+        "earnings fall below the median for comparable high school graduates in their state or nationwide.\n\n"
+        "We are using **California's two-year and certificate-granting colleges** as a pilot dataset to explore "
+        "how these rules may operate and how alternative metrics may "
+        "yield different policy outcomes."
+    )
+    
+    
+    # Disclaimer
+    st.subheader("Disclaimer")
+    st.markdown(
+        "The data and analyses on this site are intended **solely for research and policy analysis purposes**. "
+        "They should **not** be used to make enrollment decisions about individual colleges or programs. "
+        "Metrics are based on public datasets (IPEDS, U.S. Census, Golden Returns) and may not capture all factors "
+        "affecting individual educational or economic outcomes."
+    )
+    
+    st.info("Use the sidebar navigation to explore our research tools and datasets.")
 
 def render_explore(df: pd.DataFrame):
     import altair as alt  # lazy import to avoid blank app if Altair missing
@@ -149,4 +191,208 @@ def render_methodology():
         "- **ROI (years):** Total net price ÷ annual earnings premium (simple payback).\n"
         "- **Assumptions & Limitations:** Completion time, imputation rules, missing-data handling; not causal."
     )
+
+def render_college_view(df):
+    """Render the College View page for searching and viewing individual institution details."""
+    st.title("College View")
+    st.markdown("Search for a college to view detailed metrics and analysis")
+    
+    # Check if data is available
+    if df.empty:
+        st.error("No data available. Please check the dataset files.")
+        return
+    
+    # Create search box
+    st.markdown("---")
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        # Get list of institutions for selectbox
+        institutions = sorted(df['Institution'].unique())
+        
+        # Search selectbox with placeholder
+        selected_institution = st.selectbox(
+            "Search for a college:",
+            options=[""] + institutions,
+            format_func=lambda x: "Type to search..." if x == "" else x,
+            help="Start typing to search for a college"
+        )
+    
+    # Display institution details if one is selected
+    if selected_institution and selected_institution != "":
+        # Get data for selected institution
+        inst_data = df[df['Institution'] == selected_institution].iloc[0]
+        
+        st.markdown("---")
+        
+        # Institution header
+        st.header(f"📍 {selected_institution}")
+        
+        # Basic information in columns
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("County", inst_data.get('County', 'N/A'))
+            if 'Region' in inst_data:
+                st.metric("Region", inst_data.get('Region', 'N/A'))
+        
+        with col2:
+            st.metric("Sector", inst_data.get('Sector', 'N/A'))
+            if 'Predominant Award' in inst_data:
+                st.metric("Award Type", inst_data.get('Predominant Award', 'N/A'))
+        
+        with col3:
+            st.metric("10-Year Median Earnings", f"${inst_data['median_earnings_10yr']:,.0f}")
+            st.metric("Total Net Price (2 years)", f"${inst_data['total_net_price']:,.0f}")
+        
+        # Earnings Premium Section
+        st.markdown("---")
+        st.subheader("📊 Earnings Premium")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                "Statewide Premium",
+                f"${inst_data['premium_statewide']:,.0f}",
+                help="Earnings above statewide HS baseline ($24,939)"
+            )
+        
+        with col2:
+            st.metric(
+                "Regional Premium", 
+                f"${inst_data['premium_regional']:,.0f}",
+                help=f"Earnings above county HS baseline (${inst_data['hs_median_income']:,.0f})"
+            )
+        
+        with col3:
+            delta = inst_data['premium_statewide'] - inst_data['premium_regional']
+            st.metric(
+                "Premium Delta",
+                f"${abs(delta):,.0f}",
+                delta=f"{'Higher' if delta > 0 else 'Lower'} statewide",
+                delta_color="normal" if delta > 0 else "inverse"
+            )
+        
+        # ROI Section
+        st.markdown("---")
+        st.subheader("💰 Return on Investment (ROI)")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            roi_sw = inst_data['roi_statewide_years']
+            if roi_sw < 999:
+                st.metric(
+                    "Statewide ROI",
+                    f"{roi_sw:.1f} years",
+                    help="Years to recoup costs using statewide baseline"
+                )
+            else:
+                st.metric(
+                    "Statewide ROI",
+                    "N/A",
+                    help="Negative earnings premium"
+                )
+        
+        with col2:
+            roi_reg = inst_data['roi_regional_years']
+            if roi_reg < 999:
+                st.metric(
+                    "Regional ROI",
+                    f"{roi_reg:.1f} years",
+                    help="Years to recoup costs using regional baseline"
+                )
+            else:
+                st.metric(
+                    "Regional ROI",
+                    "N/A",
+                    help="Negative earnings premium"
+                )
+        
+        with col3:
+            if roi_sw < 999 and roi_reg < 999:
+                roi_delta = roi_sw - roi_reg
+                st.metric(
+                    "ROI Difference",
+                    f"{abs(roi_delta):.1f} years",
+                    delta=f"{'Longer' if roi_delta > 0 else 'Shorter'} statewide",
+                    delta_color="inverse" if roi_delta > 0 else "normal"
+                )
+            else:
+                st.metric("ROI Difference", "N/A")
+        
+        # Rankings Section
+        st.markdown("---")
+        st.subheader("🏆 Rankings")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            rank_sw = int(inst_data['rank_statewide'])
+            total_institutions = len(df)
+            st.metric(
+                "Statewide Rank",
+                f"#{rank_sw} of {total_institutions}",
+                help="Ranking based on statewide ROI (lower is better)"
+            )
+        
+        with col2:
+            rank_reg = int(inst_data['rank_regional'])
+            st.metric(
+                "Regional Rank",
+                f"#{rank_reg} of {total_institutions}",
+                help="Ranking based on regional ROI (lower is better)"
+            )
+        
+        with col3:
+            rank_change = int(inst_data['rank_change'])
+            if rank_change != 0:
+                st.metric(
+                    "Rank Change",
+                    f"{abs(rank_change)} positions",
+                    delta=f"{'Better' if rank_change > 0 else 'Worse'} regionally",
+                    delta_color="normal" if rank_change > 0 else "inverse"
+                )
+            else:
+                st.metric("Rank Change", "Same rank")
+        
+        # Detailed Metrics Table
+        st.markdown("---")
+        st.subheader("📋 Detailed Metrics")
+        
+        # Create a detailed metrics dataframe
+        metrics_data = {
+            "Metric": [
+                "Graduate Median Earnings (10yr)",
+                "Annual Net Price",
+                "Total Net Price (2 years)",
+                "County HS Baseline",
+                "Statewide HS Baseline",
+                "Statewide Earnings Premium",
+                "Regional Earnings Premium",
+                "Statewide ROI (years)",
+                "Regional ROI (years)",
+                "Statewide Rank",
+                "Regional Rank",
+                "Rank Change"
+            ],
+            "Value": [
+                f"${inst_data['median_earnings_10yr']:,.0f}",
+                f"${inst_data['total_net_price']/2:,.0f}",
+                f"${inst_data['total_net_price']:,.0f}",
+                f"${inst_data['hs_median_income']:,.0f}",
+                "$24,939",
+                f"${inst_data['premium_statewide']:,.0f}",
+                f"${inst_data['premium_regional']:,.0f}",
+                f"{inst_data['roi_statewide_years']:.2f}" if inst_data['roi_statewide_years'] < 999 else "N/A",
+                f"{inst_data['roi_regional_years']:.2f}" if inst_data['roi_regional_years'] < 999 else "N/A",
+                f"#{int(inst_data['rank_statewide'])}",
+                f"#{int(inst_data['rank_regional'])}",
+                f"{int(inst_data['rank_change']):+d}"
+            ]
+        }
+        
+        metrics_df = pd.DataFrame(metrics_data)
+        st.dataframe(metrics_df, use_container_width=True, hide_index=True)
 

@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 from lib.data import load_roi_metrics_dataset
-from lib.ui import render_home, render_explore, render_rankings, render_methodology
+from lib.ui import render_home, render_explore, render_rankings, render_methodology, render_markdown_page
 
 st.set_page_config(page_title="Earnings Premium & ROI Explorer", layout="wide")
 
@@ -19,19 +19,24 @@ if 'current_subpage' not in st.session_state:
     st.session_state.current_subpage = None
 
 # Home Section
-with st.sidebar.expander("🏠 Home", expanded=True):
-    if st.button("Project Overview", use_container_width=True):
-        st.session_state.current_page = 'home'
-        st.session_state.current_subpage = None
+if st.sidebar.button("🏠 Home", use_container_width=True):
+    st.session_state.current_page = 'home'
+    st.session_state.current_subpage = None
 
-# Metrics Comparison Section
-with st.sidebar.expander("📊 Metrics Comparison", expanded=False):
+# Metrics Section
+with st.sidebar.expander("📊 Metrics", expanded=False):
+    if st.button("Read First", use_container_width=True):
+        st.session_state.current_page = 'metrics'
+        st.session_state.current_subpage = 'readfirst'
     if st.button("Earnings Premium", use_container_width=True):
         st.session_state.current_page = 'earnings'
         st.session_state.current_subpage = 'comparison'
     if st.button("ROI", use_container_width=True):
         st.session_state.current_page = 'earnings'
         st.session_state.current_subpage = 'analysis'
+    if st.button("College View", use_container_width=True):
+        st.session_state.current_page = 'metrics'
+        st.session_state.current_subpage = 'college_view'
 
 # Data Analysis Section
 with st.sidebar.expander("📊 Data Analysis", expanded=False):
@@ -114,6 +119,15 @@ current_subpage = st.session_state.current_subpage
 
 if current_page == 'home':
     render_home()
+elif current_page == 'metrics':
+    if current_subpage == 'readfirst':
+        render_markdown_page("read_first.md")
+    elif current_subpage == 'college_view':
+        from lib.ui import render_college_view
+        render_college_view(df)
+    else:
+        st.header("Metrics")
+        st.info("Select a metric from the sidebar to begin.")
 elif current_page == 'earnings':
     if current_subpage == 'comparison':
         # Earnings Premium Page
