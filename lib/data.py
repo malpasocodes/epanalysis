@@ -62,11 +62,15 @@ def load_roi_metrics_dataset(roi_metrics_path: str = "data/roi-metrics.csv",
         # Load institutions data for additional fields like Region
         inst_df = pd.read_csv(institutions_path)
         
+        # Filter for Associate's institutions only
+        inst_df = inst_df[inst_df['Predominant Award'] == "Associate's"]
+        
         # Merge on Institution name (both datasets should have this)
+        # Using inner join to only keep institutions that are Associate's
         df = roi_df.merge(
-            inst_df[['Institution', 'Region']], 
+            inst_df[['Institution', 'Region', 'Predominant Award']], 
             on='Institution', 
-            how='left'
+            how='inner'
         )
         
         # Handle any missing regions
@@ -84,6 +88,29 @@ def load_roi_metrics_dataset(roi_metrics_path: str = "data/roi-metrics.csv",
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
+        
+        # Correct total_net_price: Associate's degrees are 2-year programs
+        # So total cost should be 2x annual net price
+        df['total_net_price'] = df['total_net_price'] * 2
+        
+        # Recalculate ROI metrics with corrected total_net_price
+        # Statewide ROI
+        statewide_baseline = 24939.44
+        df['premium_statewide'] = df['median_earnings_10yr'] - statewide_baseline
+        df['roi_statewide_years'] = df['total_net_price'] / df['premium_statewide']
+        
+        # Regional ROI
+        df['premium_regional'] = df['median_earnings_10yr'] - df['hs_median_income']
+        df['roi_regional_years'] = df['total_net_price'] / df['premium_regional']
+        
+        # Handle invalid ROI (negative premium or division by zero)
+        df.loc[df['premium_statewide'] <= 0, 'roi_statewide_years'] = 999
+        df.loc[df['premium_regional'] <= 0, 'roi_regional_years'] = 999
+        
+        # Recalculate rankings based on corrected ROI
+        df['rank_statewide'] = df['roi_statewide_years'].rank(method='min')
+        df['rank_regional'] = df['roi_regional_years'].rank(method='min')
+        df['rank_change'] = df['rank_statewide'] - df['rank_regional']
         
         return df
         
